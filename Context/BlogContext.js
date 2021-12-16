@@ -1,11 +1,17 @@
-import React, { useReducer } from "react";
-
-const BlogContext = React.createContext();  // can be thought of as a pipe/path which helps move information from parent to deeply nested component
+import createDataContext from "./createDataContext";
 
 const blogReducer = (state, action) => {
     switch(action.type){
         case 'add_blogpost' : {
-            return [...state, {title : `Blog Post #${state.length + 1}`}]
+            return [...state, {id : Math.floor(Math.random() * 99999), title : action.payload.title, content : action.payload.content}];
+        }
+        case 'delete_blogpost' : {
+            return state.filter((blogPost) => blogPost.id != action.payload);
+        }
+        case 'edit_blogpost' : {
+            return state.map((blogPost) => {
+                return blogPost.id === action.payload.id ? action.payload : blogPost;
+            })
         }
         default : {
             return state; 
@@ -13,27 +19,24 @@ const blogReducer = (state, action) => {
     }
 }
 
-export const BlogProvider = ({children}) => {
-    const [blogPosts, dispatch] = useReducer(blogReducer, []);  
-
-    const addBlogPost = () => {
-        dispatch({type : 'add_blogpost'});
+const deleteBlogPost = (dispatch) => {
+    return (id) => {
+        dispatch({type : 'delete_blogpost', payload : id});
     }
-    return <BlogContext.Provider value={{data : blogPosts, addBlogPost : addBlogPost()}}>
-        {children}
-    </BlogContext.Provider>
-} 
+}
 
-export default BlogContext;
+const addBlogPost = (dispatch) => {
+    return (title, content, callback) => {
+        dispatch({type : 'add_blogpost', payload : { title, content }});
+        callback();
+    }
+}
 
+const editBlogPost = (dispatch) => {
+    return (id, title, content, callback) => {
+        dispatch({type : 'edit_blogpost' , payload : {id, title, content}});
+        callback();
+    }
+}
 
-/*
-Children :
-when a parent component returns a child component within which there is another nested component, the parent component renders the child component and sends the 
-nested component as props to the child which the child component accepts then renders it within in. This prop is called as children. It enables us to build custom 
-components accepts othe components as an argument which shows up inside the custom component as a prop.
-
-Provider :
-When we create a blogContext object, we get access to the provider which accepts some information or is the source of information and makes it available to all our
-child components. The provider is the mechanism which moves the actual information from parent to deeply nested child. 
-*/
+export const { Context, Provider } = createDataContext(blogReducer, {addBlogPost, deleteBlogPost, editBlogPost}, [{title : "On a Summer Afternoon", content : "Blah Blah Blah...", id : 1}])
